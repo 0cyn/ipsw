@@ -65,6 +65,11 @@ build: ## Build ipsw
 	@$(GO_BIN) mod download
 	@CGO_ENABLED=1 $(GO_BIN) build -ldflags "-s -w -X github.com/blacktop/ipsw/cmd/ipsw/cmd.AppVersion=$(CUR_VERSION) -X github.com/blacktop/ipsw/cmd/ipsw/cmd.AppBuildTime=$(date -u +%Y%m%d)" ./cmd/ipsw
 
+build-c:
+	@echo " > Building C Library"
+	@$(GO_BIN) mod download
+	@CGO_ENABLED=1 $(GO_BIN) build -ldflags "-s -w -X github.com/blacktop/ipsw/cmd/ipsw/cmd.AppVersion=$(CUR_VERSION) -X github.com/blacktop/ipsw/cmd/ipsw/cmd.AppBuildTime=$(date -u +%Y%m%d)" -buildmode c-shared -o ipsw.dylib ./cmd/ipsw
+
 build-ios: ## Build ipsw for iOS
 	@echo " > Building ipsw"
 	@$(GO_BIN) mod download

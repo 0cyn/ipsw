@@ -1,23 +1,27 @@
 package download
 
+//#cgo LDFLAGS:
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+import "C"
 import (
 	"bufio"
 	"container/list"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/apex/log"
+	"github.com/blacktop/ipsw/internal/sm"
+	"github.com/blacktop/ipsw/internal/utils"
+	"github.com/blacktop/ipsw/pkg/info"
+	semver "github.com/hashicorp/go-version"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/apex/log"
-	"github.com/blacktop/ipsw/internal/sm"
-	"github.com/blacktop/ipsw/internal/utils"
-	"github.com/blacktop/ipsw/pkg/info"
-	semver "github.com/hashicorp/go-version"
 )
 
 const (
@@ -771,6 +775,31 @@ func CreateWikiFilter(cfg *WikiConfig) string {
 	}
 
 	return fmt.Sprintf("%s/%s", page, device)
+}
+
+//export c_GetWikiIPSWs
+func c_GetWikiIPSWs(configJson *C.char, configJsonLen C.int, proxy *C.char, proxyLen C.int, insecure C.char,
+	outputJson **C.char, outputJsonLen *C.int) C.char {
+	var wikiConfig WikiConfig
+	err := json.Unmarshal([]byte(C.GoStringN(configJson, configJsonLen)), &wikiConfig)
+	if err != nil {
+		fmt.Errorf("Failed with %s\n", err.Error())
+		return C.char(0)
+	}
+	fw, wfwErr := GetWikiIPSWs(&wikiConfig, C.GoStringN(proxy, proxyLen), bool(insecure == 1))
+	if wfwErr != nil {
+		fmt.Errorf("c_getWikiIPSWs: GetWikiIPSWs failed with %w", wfwErr)
+		return C.char(0)
+	}
+	fret, jsonErr := json.Marshal(fw)
+	if jsonErr != nil {
+		fmt.Errorf("failed to create request: %w", jsonErr)
+		return C.char(0)
+	}
+	cs := C.CString(string(fret))
+	*outputJson = cs
+	*outputJsonLen = C.int(C.strlen(cs))
+	return C.char(1)
 }
 
 // GetWikiIPSWs queries theiphonewiki.com for IPSWs
