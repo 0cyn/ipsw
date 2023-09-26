@@ -1,5 +1,10 @@
 package xcode
 
+//#cgo LDFLAGS:
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+import "C"
 import (
 	"bytes"
 	"compress/gzip"
@@ -73,6 +78,29 @@ func WriteToJSON(devices []Device, dest string) error {
 		return err
 	}
 	return os.WriteFile(filepath.Clean(dest), dJSON, 0660)
+}
+
+//export c_pkg_xcode_xcode_GetDevices
+func c_pkg_xcode_xcode_GetDevices(outJson **C.char, outJsonLen *C.uint, err **C.char, errLen *C.uint) C.char {
+	devices, devicesError := GetDevices()
+	if devicesError != nil {
+		outError := fmt.Sprintf("c_pkg_xcode_xcode_GetDevices: GetDeviceIPSWs failed with %w", devicesError)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	fret, jsonErr := json.Marshal(devices)
+	if jsonErr != nil {
+		outError := fmt.Sprintf("c_pkg_xcode_xcode_GetDevices: Failed to serialize Device object: %w", jsonErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	cs := C.CString(string(fret))
+	*outJson = cs
+	*outJsonLen = C.uint(C.strlen(cs))
+
+	return C.char(1)
 }
 
 // GetDevices reads the devices from embedded JSON

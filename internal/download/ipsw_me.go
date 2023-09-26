@@ -1,5 +1,10 @@
 package download
 
+//#cgo LDFLAGS:
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+import "C"
 import (
 	"encoding/json"
 	"fmt"
@@ -61,6 +66,30 @@ func GetAllDevices() ([]Device, error) {
 	return devices, nil
 }
 
+//export c_internal_download_ipsw_me_GetDevice
+func c_internal_download_ipsw_me_GetDevice(identifier *C.char, identifierLen C.uint, outJson **C.char, outJsonLen *C.uint, err **C.char, errLen *C.uint) C.char {
+
+	device, deviceError := GetDevice(C.GoStringN(identifier, C.int(identifierLen)))
+	if deviceError != nil {
+		outError := fmt.Sprintf("c_GetDevice: GetDevice failed with %w", deviceError)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	fret, jsonErr := json.Marshal(device)
+	if jsonErr != nil {
+		outError := fmt.Sprintf("c_GetDevice: Failed to serialize Device object: %w", jsonErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	cs := C.CString(string(fret))
+	*outJson = cs
+	*outJsonLen = C.uint(C.strlen(cs))
+
+	return C.char(1)
+}
+
 // GetDevice returns a device from it's identifier
 func GetDevice(identifier string) (Device, error) {
 	d := Device{}
@@ -85,6 +114,29 @@ func GetDevice(identifier string) (Device, error) {
 	}
 
 	return d, nil
+}
+
+//export c_internal_download_ipsw_me_GetDeviceIPSWs
+func c_internal_download_ipsw_me_GetDeviceIPSWs(identifier *C.char, identifierLen C.uint, outJson **C.char, outJsonLen *C.uint, err **C.char, errLen *C.uint) C.char {
+	device, deviceError := GetDeviceIPSWs(C.GoStringN(identifier, C.int(identifierLen)))
+	if deviceError != nil {
+		outError := fmt.Sprintf("c_GetDeviceIPSWs: GetDeviceIPSWs failed with %w", deviceError)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	fret, jsonErr := json.Marshal(device)
+	if jsonErr != nil {
+		outError := fmt.Sprintf("c_GetDeviceIPSWs: Failed to serialize Device object: %w", jsonErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
+		return C.char(0)
+	}
+	cs := C.CString(string(fret))
+	*outJson = cs
+	*outJsonLen = C.uint(C.strlen(cs))
+
+	return C.char(1)
 }
 
 // GetDeviceIPSWs returns a device's IPSWs from it's identifier

@@ -777,23 +777,29 @@ func CreateWikiFilter(cfg *WikiConfig) string {
 	return fmt.Sprintf("%s/%s", page, device)
 }
 
-//export c_GetWikiIPSWs
-func c_GetWikiIPSWs(configJson *C.char, configJsonLen C.int, proxy *C.char, proxyLen C.int, insecure C.char,
-	outputJson **C.char, outputJsonLen *C.int) C.char {
+//export c_internal_download_iphonewiki_GetWikiIPSWs
+func c_internal_download_iphonewiki_GetWikiIPSWs(configJson *C.char, configJsonLen C.int, proxy *C.char, proxyLen C.int, insecure C.char,
+	outputJson **C.char, outputJsonLen *C.int, err **C.char, errLen *C.uint) C.char {
 	var wikiConfig WikiConfig
-	err := json.Unmarshal([]byte(C.GoStringN(configJson, configJsonLen)), &wikiConfig)
-	if err != nil {
-		fmt.Errorf("Failed with %s\n", err.Error())
+	jsonErr := json.Unmarshal([]byte(C.GoStringN(configJson, configJsonLen)), &wikiConfig)
+	if jsonErr != nil {
+		outError := fmt.Sprintf("c_getWikiIPSWs: Deser failed with %w", jsonErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
 		return C.char(0)
 	}
 	fw, wfwErr := GetWikiIPSWs(&wikiConfig, C.GoStringN(proxy, proxyLen), bool(insecure == 1))
 	if wfwErr != nil {
-		fmt.Errorf("c_getWikiIPSWs: GetWikiIPSWs failed with %w", wfwErr)
+		outError := fmt.Sprintf("c_getWikiIPSWs: GetWikiIPSWs failed with %w", wfwErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
 		return C.char(0)
 	}
 	fret, jsonErr := json.Marshal(fw)
 	if jsonErr != nil {
-		fmt.Errorf("failed to create request: %w", jsonErr)
+		outError := fmt.Sprintf("c_getWikiIPSWs: failed to create request: %w", jsonErr)
+		*err = C.CString(outError)
+		*errLen = C.uint(len(outError))
 		return C.char(0)
 	}
 	cs := C.CString(string(fret))
